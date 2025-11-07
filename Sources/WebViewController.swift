@@ -3,7 +3,7 @@ import WebKit
 
 final class WebViewController: UIViewController, WKNavigationDelegate, WKScriptMessageHandler {
   private var webView: WKWebView!
-  private let partnerURL = URL(string: "https://partner.obynexbroker.com/partner")!
+  private let partnerURL = URL(string: "https://partner.obynexbroker.com/")!
   private var lastTokenSnippet: String?
 
   override func viewDidLoad() {
