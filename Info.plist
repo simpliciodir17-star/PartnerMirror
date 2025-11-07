@@ -3,48 +3,20 @@
 <plist version="1.0">
 <dict>
 
-  <key>CFBundleDevelopmentRegion</key>
-  <string>en</string>
-  <key>CFBundleExecutable</key>
-  <string>$(EXECUTABLE_NAME)</string>
-  <key>CFBundleIdentifier</key>
-  <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-  <key>CFBundleInfoDictionaryVersion</key>
-  <string>6.0</string>
-  <key>CFBundleName</key>
-  <string>PartnerMirror</string>
-  <!-- opcional: nome no ícone -->
-  <key>CFBundleDisplayName</key>
-  <string>Partner Mirror</string>
-  <key>CFBundlePackageType</key>
-  <string>APPL</string>
-  <key>CFBundleShortVersionString</key>
-  <string>1.0</string>
-  <key>CFBundleVersion</key>
-  <string>1</string>
-  <key>LSRequiresIPhoneOS</key>
-  <true/>
+  <key>CFBundleDevelopmentRegion</key><string>en</string>
+  <key>CFBundleExecutable</key><string>$(EXECUTABLE_NAME)</string>
+  <key>CFBundleIdentifier</key><string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+  <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
+  <key>CFBundleName</key><string>PartnerMirror</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleShortVersionString</key><string>1.0</string>
+  <key>CFBundleVersion</key><string>1</string>
+  <key>LSRequiresIPhoneOS</key><true/>
 
-  <!-- Força modo claro no preview -->
-  <key>UIUserInterfaceStyle</key>
-  <string>Light</string>
+  <!-- Sem storyboard -->
+  <key>UIMainStoryboardFile</key><string></string>
 
-  <!-- Orientações suportadas -->
-  <key>UISupportedInterfaceOrientations</key>
-  <array>
-    <string>UIInterfaceOrientationPortrait</string>
-    <string>UIInterfaceOrientationLandscapeLeft</string>
-    <string>UIInterfaceOrientationLandscapeRight</string>
-  </array>
-  <key>UISupportedInterfaceOrientations~ipad</key>
-  <array>
-    <string>UIInterfaceOrientationPortrait</string>
-    <string>UIInterfaceOrientationPortraitUpsideDown</string>
-    <string>UIInterfaceOrientationLandscapeLeft</string>
-    <string>UIInterfaceOrientationLandscapeRight</string>
-  </array>
-
-  <!-- SEM storyboard; usa SceneDelegate como root -->
+  <!-- SceneDelegate -->
   <key>UIApplicationSceneManifest</key>
   <dict>
     <key>UISceneConfigurations</key>
@@ -61,31 +33,20 @@
     </dict>
   </dict>
 
-  <!-- ATS: permite cargas web na WebView e exceção afinada pro domínio -->
-  <key>NSAppTransportSecurity</key>
-  <dict>
-    <key>NSAllowsArbitraryLoads</key>
-    <false/>
-    <key>NSAllowsArbitraryLoadsInWebContent</key>
-    <true/>
-    <key>NSExceptionDomains</key>
-    <dict>
-      <key>partner.obynexbroker.com</key>
-      <dict>
-        <key>NSIncludesSubdomains</key>
-        <true/>
-        <!-- relaxa requisitos fortes de TLS p/ conteúdo web, sem liberar geral -->
-        <key>NSExceptionRequiresForwardSecrecy</key>
-        <false/>
-        <key>NSRequiresCertificateTransparency</key>
-        <false/>
-      </dict>
-    </dict>
-  </dict>
-
-  <!-- declaração padrão p/ export compliance -->
-  <key>ITSAppUsesNonExemptEncryption</key>
-  <false/>
+  <!-- Orientações -->
+  <key>UISupportedInterfaceOrientations</key>
+  <array>
+    <string>UIInterfaceOrientationPortrait</string>
+    <string>UIInterfaceOrientationLandscapeLeft</string>
+    <string>UIInterfaceOrientationLandscapeRight</string>
+  </array>
+  <key>UISupportedInterfaceOrientations~ipad</key>
+  <array>
+    <string>UIInterfaceOrientationPortrait</string>
+    <string>UIInterfaceOrientationPortraitUpsideDown</string>
+    <string>UIInterfaceOrientationLandscapeLeft</string>
+    <string>UIInterfaceOrientationLandscapeRight</string>
+  </array>
 
 </dict>
 </plist>
