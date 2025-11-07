@@ -1,22 +1,19 @@
-workflows:
-  ios_simulator_build:
-    name: iOS Simulator Build (check)
-    environment:
-      xcode: latest
-    scripts:
-      - name: Instalar XcodeGen
-        script: brew install xcodegen
-      - name: Gerar projeto Xcode
-        script: xcodegen generate
-      - name: Resolver pacotes SPM (se houver)
-        script: xcodebuild -resolvePackageDependencies -project PartnerMirror.xcodeproj -scheme PartnerMirror
-      - name: Build para simulador (sem assinatura)
-        script: |
-          xcodebuild \
-            -project PartnerMirror.xcodeproj \
-            -scheme PartnerMirror \
-            -sdk iphonesimulator \
-            -configuration Debug \
-            build
-    artifacts:
-      - ~/Library/Developer/Xcode/DerivedData/**/Build/Products/Debug-iphonesimulator/*.app
+name: PartnerMirror
+options:
+  bundleIdPrefix: com.yourcompany
+targets:
+  PartnerMirror:
+    type: application
+    platform: iOS
+    deploymentTarget: "13.0"
+    sources:
+      - path: Sources
+    info:
+      path: Info.plist
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.yourcompany.PartnerMirror
+      SWIFT_VERSION: 5.0
+      INFOPLIST_FILE: Info.plist
+      ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    scheme:
+      testTargets: []
