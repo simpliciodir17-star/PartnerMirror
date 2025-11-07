@@ -5,7 +5,7 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKScriptM
   private var webView: WKWebView!
   // ENDEREÇO DO PAINEL (original): 
   // - Se quiser usar a raiz, troque para "https://partner.obynexbroker.com/"
-  private let partnerURL = URL(string: "https://partner.obynexbroker.com/partner")!
+  private let partnerURL = URL(string: "https://partner.obynexbroker.com/")!
   private var lastTokenSnippet: String?
 
   override func viewDidLoad() {
