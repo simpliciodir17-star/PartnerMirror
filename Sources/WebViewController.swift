@@ -5,12 +5,21 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKScriptM
   private var webView: WKWebView!
   private let partnerURL = URL(string: "https://partner.obynexbroker.com/")!
   private var lastTokenSnippet: String?
+  private let loadingLabel: UILabel = {
+    let l = UILabel()
+    l.text = "Carregando…"
+    l.textAlignment = .center
+    l.font = .systemFont(ofSize: 16, weight: .medium)
+    l.translatesAutoresizingMaskIntoConstraints = false
+    l.isHidden = false
+    return l
+  }()
 
   override func viewDidLoad() {
     super.viewDidLoad()
     view.backgroundColor = .systemBackground
 
-    // Controller de scripts + JS de captura do token
+    // 1) Controller de scripts + JS de captura do token
     let userContent = WKUserContentController()
 
     let injectedJS = #"""
@@ -40,11 +49,9 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKScriptM
     """#
     let userScript = WKUserScript(source: injectedJS, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
     userContent.addUserScript(userScript)
-
-    // Bridge JS -> nativo (precisa do handler com este nome)
     userContent.add(self, name: "nativeHandler")
 
-    // WebView persistente
+    // 2) WebView persistente + UA de Safari iOS
     let config = WKWebViewConfiguration()
     config.websiteDataStore = .default()
     config.preferences.javaScriptEnabled = true
@@ -52,13 +59,18 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKScriptM
 
     webView = WKWebView(frame: .zero, configuration: config)
     webView.navigationDelegate = self
+    webView.customUserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1"
     webView.translatesAutoresizingMaskIntoConstraints = false
+
     view.addSubview(webView)
+    view.addSubview(loadingLabel)
     NSLayoutConstraint.activate([
       webView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
       webView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
       webView.topAnchor.constraint(equalTo: view.topAnchor),
-      webView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+      webView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+      loadingLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+      loadingLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor)
     ])
 
     var req = URLRequest(url: partnerURL)
@@ -66,7 +78,7 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKScriptM
     webView.load(req)
   }
 
-  // ✅ Implementação exigida pelo protocolo WKScriptMessageHandler
+  // Recebe {type:'auth_token', token:'...'} do JS
   func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
     guard message.name == "nativeHandler",
           let body = message.body as? [String: Any],
@@ -75,15 +87,44 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKScriptM
           !token.isEmpty else { return }
 
     let snippet = "\(token.prefix(4))…\(token.suffix(4))"
-    guard snippet != lastTokenSnippet else { return } // evita alerta repetindo a cada 3s
+    guard snippet != lastTokenSnippet else { return }
     lastTokenSnippet = snippet
 
+    // DEBUG visual para validar captura (uma vez)
     DispatchQueue.main.async {
-      let alert = UIAlertController(title: "Token capturado", message: snippet, preferredStyle: .alert)
-      alert.addAction(UIAlertAction(title: "OK", style: .default))
-      self.present(alert, animated: true)
+      let a = UIAlertController(title: "Token capturado", message: snippet, preferredStyle: .alert)
+      a.addAction(UIAlertAction(title: "OK", style: .default))
+      self.present(a, animated: true)
     }
-    // (No próximo passo vamos enviar esse token para seu endpoint/Make; nada de salvar localmente.)
+  }
+
+  // ====== DEBUG DE NAVEGAÇÃO ======
+  func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+    if let u = navigationAction.request.url?.absoluteString {
+      print("[NAV] \(u)")
+    }
+    decisionHandler(.allow)
+  }
+
+  func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+    loadingLabel.isHidden = false
+    print("[LOAD] start \(webView.url?.absoluteString ?? "")")
+  }
+
+  func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+    loadingLabel.isHidden = true
+    print("[LOAD] finish \(webView.url?.absoluteString ?? "")")
+  }
+
+  func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+    loadingLabel.isHidden = true
+    let nsErr = error as NSError
+    print("[LOAD][FAIL] \(nsErr.domain) \(nsErr.code) \(nsErr.localizedDescription)")
+    // Mostra o erro pra você ver no device (em TestFlight)
+    let msg = "Erro ao abrir: \(nsErr.localizedDescription)\n(\(nsErr.domain)#\(nsErr.code))"
+    let a = UIAlertController(title: "Falha ao carregar", message: msg, preferredStyle: .alert)
+    a.addAction(UIAlertAction(title: "OK", style: .default))
+    present(a, animated: true)
   }
 
   deinit {
