@@ -3,7 +3,7 @@ import WebKit
 
 final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavigationDelegate, WKUIDelegate {
   private var webView: WKWebView!
-  // Endereço correto do painel (raiz, sem /partner)
+  // URL pública correta do painel do parceiro
   private let partnerURL = URL(string: "https://partner.obynexbroker.com/")!
   private var lastTokenSnippet: String?
 
