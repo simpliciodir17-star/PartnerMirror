@@ -3,11 +3,16 @@ import UIKit
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
   var window: UIWindow?
 
-  func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
-    guard let ws = scene as? UIWindowScene else { return }
-    let window = UIWindow(windowScene: ws)
-    window.rootViewController = WebViewController()
-    self.window = window
-    window.makeKeyAndVisible()
+  func scene(_ scene: UIScene,
+             willConnectTo session: UISceneSession,
+             options connectionOptions: UIScene.ConnectionOptions) {
+    guard let windowScene = (scene as? UIWindowScene) else { return }
+
+    let win = UIWindow(windowScene: windowScene)
+    // 👉 força o WebViewController como tela inicial
+    win.rootViewController = WebViewController()
+    win.backgroundColor = .white
+    win.makeKeyAndVisible()
+    self.window = win
   }
 }
