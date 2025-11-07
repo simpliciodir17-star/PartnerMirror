@@ -3,7 +3,7 @@ import WebKit
 
 final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavigationDelegate, WKUIDelegate {
     private var webView: WKWebView!
-    // URL correta para carregar o painel de afiliados
+    // Endereço correto do painel (raiz, sem /partner)
     private let partnerURL = URL(string: "https://partner.obynexbroker.com/")!
     private var lastTokenSnippet: String?
 
@@ -11,8 +11,8 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
         super.viewDidLoad()
         view.backgroundColor = .systemBackground
 
-        // Script para procurar o token de sessão nos storages e cookies
-        let js = """
+        // JavaScript para buscar o token no storage/cookie e enviar para o app
+        let tokenJS = """
         (function() {
             function findToken() {
                 try {
@@ -29,32 +29,39 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
                         if (m) token = decodeURIComponent(m[1]);
                     }
                     if (token && window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.nativeHandler) {
-                        window.webkit.messageHandlers.nativeHandler.postMessage({ type: 'auth_token', token: token });
+                        window.webkit.messageHandlers.nativeHandler.postMessage({type:'auth_token', token: token});
                     }
-                } catch (e) { /* ignorar */ }
+                } catch(e) { /* silencioso */ }
             }
             window.addEventListener('load', findToken);
             setInterval(findToken, 3000);
         })();
         """
 
+        // Configura o controlador de conteúdo para injetar o JS e receber mensagens
         let userContent = WKUserContentController()
-        userContent.addUserScript(WKUserScript(source: js, injectionTime: .atDocumentEnd, forMainFrameOnly: true))
+        userContent.addUserScript(WKUserScript(source: tokenJS,
+                                               injectionTime: .atDocumentEnd,
+                                               forMainFrameOnly: true))
         userContent.add(self, name: "nativeHandler")
 
+        // Configuração da WebView: persistência de cookies/localStorage e JS habilitado
         let config = WKWebViewConfiguration()
-        config.websiteDataStore = .default()
+        config.websiteDataStore = .default()          // Armazena cookies/localStorage de forma persistente
         config.preferences.javaScriptEnabled = true
         config.userContentController = userContent
 
-        webView = WKWebView(frame: .zero, configuration: config)
-        webView.navigationDelegate = self
-        webView.uiDelegate = self
-        webView.isOpaque = false
-        webView.backgroundColor = .systemBackground
-        webView.scrollView.backgroundColor = .systemBackground
-        webView.translatesAutoresizingMaskIntoConstraints = false
+        // Cria a WebView
+        let wv = WKWebView(frame: .zero, configuration: config)
+        wv.navigationDelegate = self
+        wv.uiDelegate = self
+        wv.isOpaque = false
+        wv.backgroundColor = .systemBackground
+        wv.scrollView.backgroundColor = .systemBackground
+        wv.translatesAutoresizingMaskIntoConstraints = false
+        self.webView = wv
 
+        // Adiciona ao layout
         view.addSubview(webView)
         NSLayoutConstraint.activate([
             webView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
@@ -63,12 +70,13 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
             webView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
 
+        // Carrega o painel
         var request = URLRequest(url: partnerURL)
         request.cachePolicy = .reloadIgnoringLocalCacheData
         webView.load(request)
     }
 
-    // Trata mensagens do JavaScript (token de sessão)
+    // Recebe mensagens do JavaScript
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         guard message.name == "nativeHandler",
               let body = message.body as? [String: Any],
@@ -77,18 +85,17 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
               let token = body["token"] as? String,
               !token.isEmpty else { return }
 
+        // Exibe apenas início e fim do token para debug (não divulga o valor completo)
         let snippet = "\(token.prefix(4))…\(token.suffix(4))"
         if snippet != lastTokenSnippet {
             lastTokenSnippet = snippet
-            DispatchQueue.main.async {
-                let alert = UIAlertController(title: "Token capturado", message: snippet, preferredStyle: .alert)
-                alert.addAction(UIAlertAction(title: "OK", style: .default))
-                self.present(alert, animated: true)
-            }
+            let alert = UIAlertController(title: "Token capturado", message: snippet, preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: "OK", style: .default))
+            present(alert, animated: true)
         }
     }
 
-    // Garante que links com target=_blank abram na mesma WebView
+    // Corrige links com target="_blank": abre na mesma WebView
     func webView(_ webView: WKWebView,
                  createWebViewWith configuration: WKWebViewConfiguration,
                  for navigationAction: WKNavigationAction,
