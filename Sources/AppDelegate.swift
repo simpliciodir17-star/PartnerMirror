@@ -8,6 +8,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     return true
   }
 
+  // iOS 13+ usa SceneDelegate
   func application(_ application: UIApplication,
                    configurationForConnecting connectingSceneSession: UISceneSession,
                    options: UIScene.ConnectionOptions) -> UISceneConfiguration {
