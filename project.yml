@@ -1,0 +1,24 @@
+name: PartnerMirror
+options:
+  bundleIdPrefix: com.yourcompany
+  deploymentTarget:
+    iOS: "15.0"
+targets:
+  PartnerMirror:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+    info:
+      path: Info.plist
+    entitlements: PartnerMirror.entitlements
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.yourcompany.PartnerMirror
+        SWIFT_VERSION: "5.0"
+        IPHONEOS_DEPLOYMENT_TARGET: "15.0"
+    capabilities:
+      push: false
+      backgroundModes: []
+schemes:
+  - name: PartnerMirror
