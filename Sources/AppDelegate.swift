@@ -8,12 +8,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     return true
   }
 
-  // iOS 13+ usa SceneDelegate
   func application(_ application: UIApplication,
                    configurationForConnecting connectingSceneSession: UISceneSession,
                    options: UIScene.ConnectionOptions) -> UISceneConfiguration {
-    let cfg = UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
-    cfg.delegateClass = SceneDelegate.self
-    return cfg
+    UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
   }
 }
