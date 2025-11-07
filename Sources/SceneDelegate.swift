@@ -7,7 +7,6 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
              willConnectTo session: UISceneSession,
              options connectionOptions: UIScene.ConnectionOptions) {
     guard let windowScene = (scene as? UIWindowScene) else { return }
-
     let win = UIWindow(windowScene: windowScene)
     win.rootViewController = WebViewController()
     win.backgroundColor = .systemBackground
