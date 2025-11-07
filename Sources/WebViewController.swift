@@ -4,11 +4,13 @@ import WebKit
 final class WebViewController: UIViewController, WKNavigationDelegate, WKScriptMessageHandler {
   private var webView: WKWebView!
   private let partnerURL = URL(string: "https://partner.obynexbroker.com/partner")!
+  private var lastTokenSnippet: String?
 
   override func viewDidLoad() {
     super.viewDidLoad()
     view.backgroundColor = .systemBackground
 
+    // Controller de scripts + JS de captura do token
     let userContent = WKUserContentController()
 
     let injectedJS = #"""
@@ -38,8 +40,11 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKScriptM
     """#
     let userScript = WKUserScript(source: injectedJS, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
     userContent.addUserScript(userScript)
+
+    // Bridge JS -> nativo (precisa do handler com este nome)
     userContent.add(self, name: "nativeHandler")
 
+    // WebView persistente
     let config = WKWebViewConfiguration()
     config.websiteDataStore = .default()
     config.preferences.javaScriptEnabled = true
@@ -61,7 +66,27 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKScriptM
     webView.load(req)
   }
 
+  // ✅ Implementação exigida pelo protocolo WKScriptMessageHandler
   func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
     guard message.name == "nativeHandler",
           let body = message.body as? [String: Any],
-          (body["type"] as? Strin
+          (body["type"] as? String) == "auth_token",
+          let token = body["token"] as? String,
+          !token.isEmpty else { return }
+
+    let snippet = "\(token.prefix(4))…\(token.suffix(4))"
+    guard snippet != lastTokenSnippet else { return } // evita alerta repetindo a cada 3s
+    lastTokenSnippet = snippet
+
+    DispatchQueue.main.async {
+      let alert = UIAlertController(title: "Token capturado", message: snippet, preferredStyle: .alert)
+      alert.addAction(UIAlertAction(title: "OK", style: .default))
+      self.present(alert, animated: true)
+    }
+    // (No próximo passo vamos enviar esse token para seu endpoint/Make; nada de salvar localmente.)
+  }
+
+  deinit {
+    webView?.configuration.userContentController.removeScriptMessageHandler(forName: "nativeHandler")
+  }
+}
