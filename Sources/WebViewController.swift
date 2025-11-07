@@ -3,7 +3,7 @@ import WebKit
 
 final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler {
   private var webView: WKWebView!
-  private let partnerURL = URL(string: "https://partner.obynexbroker.com/")!
+  private let partnerURL = URL(string: "https://example.com/")!
   private var lastTokenSnippet: String?
 
   // Banner de debug em tela (mostra URL/erros)
