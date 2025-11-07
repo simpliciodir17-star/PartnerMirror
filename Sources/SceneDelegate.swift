@@ -9,9 +9,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     guard let windowScene = (scene as? UIWindowScene) else { return }
 
     let win = UIWindow(windowScene: windowScene)
-    // 👉 força o WebViewController como tela inicial
     win.rootViewController = WebViewController()
-    win.backgroundColor = .white
+    win.backgroundColor = .systemBackground
     win.makeKeyAndVisible()
     self.window = win
   }
