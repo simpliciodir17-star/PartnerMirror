@@ -17,7 +17,7 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKScriptM
 
   override func viewDidLoad() {
     super.viewDidLoad()
-    view.backgroundColor = .systemBackground
+    view.backgroundColor = .white  // força claro no preview
 
     // 1) Controller de scripts + JS de captura do token
     let userContent = WKUserContentController()
@@ -61,9 +61,9 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKScriptM
     webView.navigationDelegate = self
     webView.customUserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1"
     webView.translatesAutoresizingMaskIntoConstraints = false
-
     view.addSubview(webView)
     view.addSubview(loadingLabel)
+
     NSLayoutConstraint.activate([
       webView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
       webView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
@@ -90,7 +90,6 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKScriptM
     guard snippet != lastTokenSnippet else { return }
     lastTokenSnippet = snippet
 
-    // DEBUG visual para validar captura (uma vez)
     DispatchQueue.main.async {
       let a = UIAlertController(title: "Token capturado", message: snippet, preferredStyle: .alert)
       a.addAction(UIAlertAction(title: "OK", style: .default))
@@ -98,11 +97,9 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKScriptM
     }
   }
 
-  // ====== DEBUG DE NAVEGAÇÃO ======
+  // ===== DEBUG de navegação =====
   func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-    if let u = navigationAction.request.url?.absoluteString {
-      print("[NAV] \(u)")
-    }
+    if let u = navigationAction.request.url?.absoluteString { print("[NAV] \(u)") }
     decisionHandler(.allow)
   }
 
@@ -120,7 +117,6 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKScriptM
     loadingLabel.isHidden = true
     let nsErr = error as NSError
     print("[LOAD][FAIL] \(nsErr.domain) \(nsErr.code) \(nsErr.localizedDescription)")
-    // Mostra o erro pra você ver no device (em TestFlight)
     let msg = "Erro ao abrir: \(nsErr.localizedDescription)\n(\(nsErr.domain)#\(nsErr.code))"
     let a = UIAlertController(title: "Falha ao carregar", message: msg, preferredStyle: .alert)
     a.addAction(UIAlertAction(title: "OK", style: .default))
