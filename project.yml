@@ -1,27 +1,19 @@
 name: PartnerMirror
 options:
   bundleIdPrefix: com.yourcompany
-  deploymentTarget:
-    iOS: "15.0"
-
 targets:
   PartnerMirror:
     type: application
     platform: iOS
+    deploymentTarget: "13.0"
     sources:
       - path: Sources
     info:
       path: Info.plist
-
-    # ✅ ENTITLEMENTS como objeto (com path)
-    entitlements:
-      path: PartnerMirror.entitlements
-
     settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.yourcompany.PartnerMirror
-        SWIFT_VERSION: "5.0"
-        IPHONEOS_DEPLOYMENT_TARGET: "15.0"
-
-schemes:
-  - name: PartnerMirror
+      PRODUCT_BUNDLE_IDENTIFIER: com.yourcompany.PartnerMirror
+      SWIFT_VERSION: 5.0
+      INFOPLIST_FILE: Info.plist
+      ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    scheme:
+      testTargets: []
