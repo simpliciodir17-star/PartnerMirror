@@ -11,7 +11,6 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
         super.viewDidLoad()
         view.backgroundColor = .systemBackground
 
-        // Configuração da WebView (sem injeção de JS)
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .default()
         config.preferences.javaScriptEnabled = true
@@ -33,7 +32,6 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
         ])
         self.webView = wv
 
-        // Placeholder para não parecer tela preta
         let antiBlackScreenHTML = """
         <html><body style='font:16px -apple-system;
                            display:flex;
@@ -46,7 +44,6 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
         """
         wv.loadHTMLString(antiBlackScreenHTML, baseURL: nil)
 
-        // Carrega o painel real
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
             guard let self = self else { return }
             var req = URLRequest(url: self.partnerURL)
@@ -55,10 +52,9 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
         }
     }
 
-    // MARK: - WKNavigationDelegate
+    // MARK: - Navegação
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        // Quando terminar de carregar, tenta capturar token via cookies
         captureAffiliateTokenFromCookies()
     }
 
@@ -67,20 +63,18 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
                  decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
 
         if let url = navigationAction.request.url {
-            // Tenta pegar token se vier na URL (?aff_sid=...)
             captureAffiliateTokenFromURL(url)
         }
         decisionHandler(.allow)
     }
 
-    // MARK: - Captura de token só em Swift (cookies + query)
+    // MARK: - Captura de token (cookies + query)
 
     private func captureAffiliateTokenFromCookies() {
         let cookieStore = webView.configuration.websiteDataStore.httpCookieStore
         cookieStore.getAllCookies { [weak self] cookies in
             guard let self = self else { return }
 
-            // >>> AJUSTE AQUI OS NOMES REAIS QUE VOCÊ ACHOU <<<
             let targetNames: [String] = [
                 "aff_sid",
                 "aff_session",
@@ -91,9 +85,6 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
             if let cookie = cookies.first(where: { targetNames.contains($0.name) && !$0.value.isEmpty }) {
                 self.handleCapturedToken(cookie.value, source: "cookie:\(cookie.name)")
             }
-
-            // Debug opcional:
-            // print("COOKIES:", cookies.map { "\($0.name)=\($0.value)" }.joined(separator: "; "))
         }
     }
 
@@ -101,7 +92,6 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
         guard let comps = URLComponents(url: url, resolvingAgainstBaseURL: false),
               let items = comps.queryItems else { return }
 
-        // >>> AJUSTE AQUI OS PARAMS REAIS QUE VOCÊ ACHOU <<<
         let targetParams = ["aff_sid", "aff_session", "affiliate_sid", "affiliate_token"]
 
         for name in targetParams {
@@ -116,7 +106,7 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
     private func handleCapturedToken(_ token: String, source: String) {
         guard !token.isEmpty else { return }
         let snippet = tokenSnippet(from: token)
-        guard snippet != lastTokenSnippet else { return } // evita mostrar o mesmo sempre
+        guard snippet != lastTokenSnippet else { return }
         lastTokenSnippet = snippet
 
         DispatchQueue.main.async { [weak self] in
@@ -135,7 +125,7 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
         }
     }
 
-    // MARK: - WKUIDelegate (abre target=_blank na mesma WebView)
+    // MARK: - target=_blank
 
     func webView(_ webView: WKWebView,
                  createWebViewWith configuration: WKWebViewConfiguration,
@@ -146,8 +136,6 @@ final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDeleg
         }
         return nil
     }
-
-    // MARK: - Util
 
     private func tokenSnippet(from token: String) -> String {
         guard token.count > 8 else { return token }
