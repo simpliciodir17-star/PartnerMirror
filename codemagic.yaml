@@ -4,7 +4,7 @@ workflows:
     environment:
       xcode: latest
     scripts:
-      # Novo Passo: Limpar caches do Xcode (importante em ambientes CI)
+      # NOVO PASSO: Limpa caches para evitar falhas persistentes de build
       - name: Limpar caches do Xcode
         script: |
           rm -rf ~/Library/Developer/Xcode/DerivedData
