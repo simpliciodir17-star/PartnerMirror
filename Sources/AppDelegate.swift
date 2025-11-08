@@ -2,37 +2,27 @@ import UIKit
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
+    var window: UIWindow? // Necessário para suporte a iOS < 13
 
-  var window: UIWindow?
-
-  func application(_ application: UIApplication,
-                   didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-    if #available(iOS 13.0, *) {
-      // A janela será criada pelo SceneDelegate nas versões que utilizam Scenes.
-    } else {
-      // Fallback para iOS 12 e anteriores
-      let window = UIWindow(frame: UIScreen.main.bounds)
-      window.rootViewController = WebViewController()
-      window.backgroundColor = .white
-      window.makeKeyAndVisible()
-      self.window = window
+    func application(_ application: UIApplication,
+                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        // Suporte para iOS < 13 (não usa SceneDelegate)
+        if #available(iOS 13.0, *) {
+            // A janela é configurada no SceneDelegate.
+        } else {
+            let window = UIWindow(frame: UIScreen.main.bounds)
+            window.rootViewController = WebViewController()
+            window.backgroundColor = .white
+            window.makeKeyAndVisible()
+            self.window = window
+        }
+        return true
     }
-    return true
-  }
 
-  // MARK: - UISceneSession Lifecycle (iOS 13+)
-
-  func application(_ application: UIApplication,
-                   configurationForConnecting connectingSceneSession: UISceneSession,
-                   options: UIScene.ConnectionOptions) -> UISceneConfiguration {
-    
-    let configuration = UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
-    configuration.delegateClass = SceneDelegate.self
-    return configuration
-  }
-
-  func application(_ application: UIApplication,
-                   didDiscardSceneSessions sceneSessions: Set<UISceneSession>) {
-    // Chamado quando o usuário descarta uma cena.
-  }
+    // iOS 13+ usa SceneDelegate
+    func application(_ application: UIApplication,
+                     configurationForConnecting connectingSceneSession: UISceneSession,
+                     options: UIScene.ConnectionOptions) -> UISceneConfiguration {
+        return UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
+    }
 }
