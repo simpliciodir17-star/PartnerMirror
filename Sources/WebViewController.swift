@@ -1,7 +1,8 @@
 import UIKit
 import WebKit
 
-final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavigationDelegate, WKUIDelegate {
+final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate {
+
     private var webView: WKWebView!
     private let partnerURL = URL(string: "https://partner.obynexbroker.com/")!
     private var lastTokenSnippet: String?
@@ -10,53 +11,20 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
         super.viewDidLoad()
         view.backgroundColor = .systemBackground
 
-        let userContentController = WKUserContentController()
-        userContentController.add(self, name: "nativeHandler")
+        // Configuração da WebView (sem injeção de JS)
+        let config = WKWebViewConfiguration()
+        config.websiteDataStore = .default()
+        config.preferences.javaScriptEnabled = true
 
-        // Script JavaScript para buscar o token e enviá-lo para o código Swift
-        let scriptSource = """
-        (function() {
-          function findToken() {
-            try {
-              var token = null;
-              token = window.localStorage.getItem('auth_token')
-                || window.localStorage.getItem('token')
-                || window.localStorage.getItem('accessToken')
-                || window.sessionStorage.getItem('auth_token')
-                || window.sessionStorage.getItem('token')
-                || window.sessionStorage.getItem('accessToken');
-              
-              if (token && window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.nativeHandler) {
-                window.webkit.messageHandlers.nativeHandler.postMessage({type:'auth_token', token: token});
-              }
-            } catch (e) {
-              console.error("Token search error:", e);
-            }
-          }
-          
-          // Execute logo e a cada 5 segundos
-          findToken();
-          setInterval(findToken, 5000);
-        })();
-        """
-        
-        let userScript = WKUserScript(source: scriptSource, 
-                                      injectionTime: .atDocumentEnd, 
-                                      forMainFrameOnly: true)
-        userContentController.addUserScript(userScript)
-
-        let cfg = WKWebViewConfiguration()
-        cfg.websiteDataStore = .default()
-        cfg.preferences.javaScriptEnabled = true
-        cfg.userContentController = userContentController
-
-        let wv = WKWebView(frame: .zero, configuration: cfg)
+        let wv = WKWebView(frame: .zero, configuration: config)
         wv.navigationDelegate = self
         wv.uiDelegate = self
         wv.isOpaque = false
+        wv.backgroundColor = .systemBackground
+        wv.scrollView.backgroundColor = .systemBackground
         wv.translatesAutoresizingMaskIntoConstraints = false
+
         view.addSubview(wv)
-        
         NSLayoutConstraint.activate([
             wv.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             wv.trailingAnchor.constraint(equalTo: view.trailingAnchor),
@@ -65,11 +33,20 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
         ])
         self.webView = wv
 
-        // Prevenção da tela preta: Carrega HTML temporário antes da navegação
-        let antiBlackScreenHTML = "<html><body style='font:16px -apple-system;background:#fff;display:flex;align-items:center;justify-content:center;height:100vh'>Carregando parceiro...</body></html>"
-        webView.loadHTMLString(antiBlackScreenHTML, baseURL: nil)
+        // Placeholder para não parecer tela preta
+        let antiBlackScreenHTML = """
+        <html><body style='font:16px -apple-system;
+                           display:flex;
+                           align-items:center;
+                           justify-content:center;
+                           height:100vh;
+                           background:#ffffff'>
+        Carregando parceiro...
+        </body></html>
+        """
+        wv.loadHTMLString(antiBlackScreenHTML, baseURL: nil)
 
-        // Navega para a URL de destino
+        // Carrega o painel real
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
             guard let self = self else { return }
             var req = URLRequest(url: self.partnerURL)
@@ -78,38 +55,88 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
         }
     }
 
-    // MARK: - WKScriptMessageHandler (Captura do Token)
-    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-        guard message.name == "nativeHandler",
-              let body = message.body as? [String: Any],
-              let type = body["type"] as? String, type == "auth_token",
-              let token = body["token"] as? String, 
-              !token.isEmpty else {
-            return
-        }
+    // MARK: - WKNavigationDelegate
 
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        // Quando terminar de carregar, tenta capturar token via cookies
+        captureAffiliateTokenFromCookies()
+    }
+
+    func webView(_ webView: WKWebView,
+                 decidePolicyFor navigationAction: WKNavigationAction,
+                 decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+
+        if let url = navigationAction.request.url {
+            // Tenta pegar token se vier na URL (?aff_sid=...)
+            captureAffiliateTokenFromURL(url)
+        }
+        decisionHandler(.allow)
+    }
+
+    // MARK: - Captura de token só em Swift (cookies + query)
+
+    private func captureAffiliateTokenFromCookies() {
+        let cookieStore = webView.configuration.websiteDataStore.httpCookieStore
+        cookieStore.getAllCookies { [weak self] cookies in
+            guard let self = self else { return }
+
+            // >>> AJUSTE AQUI OS NOMES REAIS QUE VOCÊ ACHOU <<<
+            let targetNames: [String] = [
+                "aff_sid",
+                "aff_session",
+                "affiliate_sid",
+                "affiliate_token"
+            ]
+
+            if let cookie = cookies.first(where: { targetNames.contains($0.name) && !$0.value.isEmpty }) {
+                self.handleCapturedToken(cookie.value, source: "cookie:\(cookie.name)")
+            }
+
+            // Debug opcional:
+            // print("COOKIES:", cookies.map { "\($0.name)=\($0.value)" }.joined(separator: "; "))
+        }
+    }
+
+    private func captureAffiliateTokenFromURL(_ url: URL) {
+        guard let comps = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              let items = comps.queryItems else { return }
+
+        // >>> AJUSTE AQUI OS PARAMS REAIS QUE VOCÊ ACHOU <<<
+        let targetParams = ["aff_sid", "aff_session", "affiliate_sid", "affiliate_token"]
+
+        for name in targetParams {
+            if let value = items.first(where: { $0.name == name })?.value,
+               !value.isEmpty {
+                handleCapturedToken(value, source: "query:\(name)")
+                break
+            }
+        }
+    }
+
+    private func handleCapturedToken(_ token: String, source: String) {
+        guard !token.isEmpty else { return }
         let snippet = tokenSnippet(from: token)
-        guard lastTokenSnippet != snippet else { return }
+        guard snippet != lastTokenSnippet else { return } // evita mostrar o mesmo sempre
         lastTokenSnippet = snippet
 
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             let alert = UIAlertController(title: "Token capturado",
-                                          message: "Token (aff_sid) capturado: \(snippet)",
+                                          message: "\(snippet)\n(\(source))",
                                           preferredStyle: .alert)
-            alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
-            
+            alert.addAction(UIAlertAction(title: "OK", style: .default))
             if self.presentedViewController == nil {
-                self.present(alert, animated: true, completion: nil)
+                self.present(alert, animated: true)
             } else {
                 self.dismiss(animated: false) {
-                    self.present(alert, animated: true, completion: nil)
+                    self.present(alert, animated: true)
                 }
             }
         }
     }
 
-    // MARK: - WKUIDelegate (Abre links em novas janelas na mesma webview)
+    // MARK: - WKUIDelegate (abre target=_blank na mesma WebView)
+
     func webView(_ webView: WKWebView,
                  createWebViewWith configuration: WKWebViewConfiguration,
                  for navigationAction: WKNavigationAction,
@@ -120,15 +147,10 @@ final class WebViewController: UIViewController, WKScriptMessageHandler, WKNavig
         return nil
     }
 
-    // MARK: - Auxiliar
+    // MARK: - Util
+
     private func tokenSnippet(from token: String) -> String {
-        if token.count <= 8 {
-            return token
-        }
-        let startIndex = token.startIndex
-        let endIndex = token.index(token.endIndex, offsetBy: -4)
-        let prefix = token[startIndex..<token.index(startIndex, offsetBy: 4)]
-        let suffix = token[endIndex..<token.endIndex]
-        return "\(prefix)…\(suffix)"
+        guard token.count > 8 else { return token }
+        return "\(token.prefix(4))…\(token.suffix(4))"
     }
 }
