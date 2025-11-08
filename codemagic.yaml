@@ -4,6 +4,12 @@ workflows:
     environment:
       xcode: latest
     scripts:
+      # Novo Passo: Limpar caches do Xcode (importante em ambientes CI)
+      - name: Limpar caches do Xcode
+        script: |
+          rm -rf ~/Library/Developer/Xcode/DerivedData
+          rm -rf build
+          
       - name: Instalar XcodeGen
         script: brew install xcodegen
       - name: Gerar projeto Xcode
