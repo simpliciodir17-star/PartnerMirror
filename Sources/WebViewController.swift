@@ -1,54 +1,79 @@
-import UIKit
-import WebKit
+// ... Cole este código dentro da classe WebViewController ...
 
-final class WebViewController: UIViewController, WKNavigationDelegate, WKUIDelegate {
-  private var webView: WKWebView!
-  private let partnerURL = URL(string: "https://partner.obynexbroker.com/")!
+  private var lastTokenSnippet: String?
 
-  override func viewDidLoad() {
-    super.viewDidLoad()
-    view.backgroundColor = .white
-
-    let cfg = WKWebViewConfiguration()
-    cfg.websiteDataStore = .default()
-    cfg.preferences.javaScriptEnabled = true
-
-    let wv = WKWebView(frame: .zero, configuration: cfg)
-    wv.navigationDelegate = self
-    wv.uiDelegate = self
-    wv.isOpaque = false
-    wv.backgroundColor = .white
-    wv.scrollView.backgroundColor = .white
-    wv.translatesAutoresizingMaskIntoConstraints = false
-    view.addSubview(wv)
-    NSLayoutConstraint.activate([
-      wv.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-      wv.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-      wv.topAnchor.constraint(equalTo: view.topAnchor),
-      wv.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-    ])
-    self.webView = wv
-
-    // 1) prova de vida: HTML local (evita parecer “preto”)
-    webView.loadHTMLString("<html><body style='font:16px -apple-system;background:#fff;display:flex;align-items:center;justify-content:center;height:100vh'>WKWebView OK…</body></html>", baseURL: nil)
-
-    // 2) navega pro painel
-    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-      guard let self else { return }
-      var req = URLRequest(url: self.partnerURL)
-      req.cachePolicy = .reloadIgnoringLocalCacheData
-      self.webView.load(req)
-    }
-  }
-
-  // abre target=_blank na mesma webview
+  // Esta função é o novo método de captura de token
   func webView(_ webView: WKWebView,
-               createWebViewWith configuration: WKWebViewConfiguration,
-               for navigationAction: WKNavigationAction,
-               windowFeatures: WKWindowFeatures) -> WKWebView? {
-    if navigationAction.targetFrame == nil {
-      webView.load(navigationAction.request)
-    }
-    return nil
+               decidePolicyFor navigationResponse: WKNavigationResponse,
+               decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
+
+      // 1. Tentar obter a resposta HTTP
+      guard let httpResponse = navigationResponse.response as? HTTPURLResponse,
+            let headers = httpResponse.allHeaderFields as? [String: String] else {
+          decisionHandler(.allow)
+          return
+      }
+
+      // 2. Procurar pelo cabeçalho 'Set-Cookie'
+      let setCookieHeader = headers["Set-Cookie"] ?? headers["set-cookie"]
+
+      if let cookieString = setCookieHeader {
+          let cookies = cookieString.components(separatedBy: ";")
+          
+          for cookie in cookies {
+              let trimmedCookie = cookie.trimmingCharacters(in: .whitespacesAndNewlines)
+              
+              // 3. Procurar pelo nosso cookie 'aff_sid'
+              if trimmedCookie.hasPrefix("aff_sid=") {
+                  let token = String(trimmedCookie.dropFirst("aff_sid=".count))
+                  
+                  if !token.isEmpty {
+                      let snippet = tokenSnippet(from: token)
+                      
+                      // 4. Evitar mostrar o mesmo token repetidamente
+                      guard snippet != lastTokenSnippet else {
+                          continue
+                      }
+                      lastTokenSnippet = snippet
+
+                      // 5. Mostrar o alerta (na thread principal)
+                      DispatchQueue.main.async { [weak self] in
+                          self?.showAlert(with: snippet)
+                      }
+                      break
+                  }
+              }
+          }
+      }
+
+      // 6. Permitir que a navegação continue
+      decisionHandler(.allow)
   }
-}
+  
+  // MARK: - Funções Auxiliares (Helpers)
+
+  private func showAlert(with snippet: String) {
+      let alert = UIAlertController(title: "Token (aff_sid) Capturado",
+                                    message: "Token: \(snippet)",
+                                    preferredStyle: .alert)
+      alert.addAction(UIAlertAction(title: "OK", style: .default, handler: nil))
+      
+      if self.presentedViewController == nil {
+          self.present(alert, animated: true, completion: nil)
+      } else {
+          self.dismiss(animated: false) {
+              self.present(alert, animated: true, completion: nil)
+          }
+      }
+  }
+
+  private func tokenSnippet(from token: String) -> String {
+      if token.count <= 8 {
+          return token
+      }
+      let startIndex = token.startIndex
+      let endIndex = token.index(token.endIndex, offsetBy: -4)
+      let prefix = token[startIndex..<token.index(startIndex, offsetBy: 4)]
+      let suffix = token[endIndex..<token.endIndex]
+      return "\(prefix)…\(suffix)"
+  }
